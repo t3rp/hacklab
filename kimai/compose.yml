@@ -1,0 +1,56 @@
+services:
+
+  sqldb:
+    image: mysql:8.3
+    container_name: kimai-sqldb
+    volumes:
+      - kimai-mysql:/var/lib/mysql
+    environment:
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+    command: --default-storage-engine innodb
+    restart: unless-stopped
+    networks:
+      - kimai-internal
+    healthcheck:
+      test: mysqladmin -p$$MYSQL_ROOT_PASSWORD ping -h localhost
+      interval: 20s
+      start_period: 10s
+      timeout: 10s
+      retries: 3
+
+  kimai:
+    image: kimai/kimai2:apache
+    container_name: kimai-app
+    volumes:
+      - kimai-data:/opt/kimai/var/data
+      - kimai-plugins:/opt/kimai/var/plugins
+    networks:
+      - proxy
+      - kimai-internal
+    environment:
+      - ADMINMAIL=${KIMAI_ADMINMAIL}
+      - ADMINPASS=${KIMAI_ADMINPASS}
+      - "DATABASE_URL=mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@sqldb/${MYSQL_DATABASE}?charset=utf8mb4&serverVersion=8.3.0"
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.kimai.rule=Host(`${KIMAI_DOMAIN}`)"
+      - "traefik.http.routers.kimai.entrypoints=websecure"
+      - "traefik.http.services.kimai.loadbalancer.server.port=8001"
+      - "traefik.http.routers.kimai.tls=true"
+      - "traefik.docker.network=proxy"
+
+volumes:
+  kimai-data:
+  kimai-mysql:
+  kimai-plugins:
+
+networks:
+  proxy:
+    external: true
+  kimai-internal:
+    name: kimai-internal
+    internal: true

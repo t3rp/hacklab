@@ -1,0 +1,72 @@
+version: '3.8'
+
+networks:
+  proxy:
+    external: true
+  backend:
+    driver: bridge
+
+services:
+  forgejo-db:
+    image: postgres:16-alpine
+    container_name: forgejo-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=forgejo
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=forgejo
+    volumes:
+      - forgejo-db-data:/var/lib/postgresql/data
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U forgejo -d forgejo"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  forgejo:
+    image: codeberg.org/forgejo/forgejo:13
+    container_name: forgejo-app
+    restart: unless-stopped
+    ports:
+      - "2222:22"
+    environment:
+      - USER_UID=1000
+      - USER_GID=1000
+      - FORGEJO__database__DB_TYPE=postgres
+      - FORGEJO__database__HOST=forgejo-db:5432
+      - FORGEJO__database__NAME=forgejo
+      - FORGEJO__database__USER=forgejo
+      - FORGEJO__database__PASSWD=${POSTGRES_PASSWORD}
+      - FORGEJO__server__DOMAIN=${FORGEJO_DOMAIN}
+      - FORGEJO__server__ROOT_URL=https://${FORGEJO_DOMAIN}/
+      - FORGEJO__server__HTTP_PORT=3000
+      - FORGEJO__server__SSH_DOMAIN=${FORGEJO_DOMAIN}
+      - FORGEJO__server__SSH_PORT=2222
+      - FORGEJO__service__DISABLE_REGISTRATION=false
+      - FORGEJO__service__REQUIRE_SIGNIN_VIEW=false
+      - FORGEJO__security__INSTALL_LOCK=true
+      - FORGEJO__mailer__ENABLED=false
+    volumes:
+      - forgejo-data:/data
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      - proxy
+      - backend
+    depends_on:
+      forgejo-db:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.forgejo.rule=Host(`${FORGEJO_DOMAIN}`)"
+      - "traefik.http.routers.forgejo.entrypoints=websecure"
+      - "traefik.http.services.forgejo.loadbalancer.server.port=3000"
+      - "traefik.http.routers.forgejo.tls=true"
+      - "traefik.docker.network=proxy"
+
+volumes:
+  forgejo-db-data:
+  forgejo-data:

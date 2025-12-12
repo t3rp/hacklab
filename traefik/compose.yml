@@ -1,0 +1,82 @@
+services:
+  traefik:
+    image: traefik:v3.4
+    container_name: traefik
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+    networks:
+      - proxy
+
+    ports:
+      - "80:80"
+      - "443:443"
+
+    environment:
+      - CF_DNS_API_TOKEN=${CF_DNS_API_TOKEN}
+
+    volumes:
+      - ${XDG_RUNTIME_DIR}/podman/podman.sock:/var/run/docker.sock:ro
+      - traefik-letsencrypt:/letsencrypt
+      - traefik-dynamic:/dynamic:ro
+
+    command:
+      # EntryPoints
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      - "--entrypoints.web.http.redirections.entrypoint.permanent=true"
+      - "--entrypoints.websecure.address=:443"
+
+      # Providers 
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.network=proxy"
+      - "--providers.file.directory=/dynamic"
+      - "--providers.file.watch=true"
+
+      # Certificate Resolvers (Let's Encrypt with Cloudflare DNS)
+      - "--certificatesresolvers.cloudflare.acme.email=${LETSENCRYPT_EMAIL}"
+      - "--certificatesresolvers.cloudflare.acme.storage=/letsencrypt/acme.json"
+      - "--certificatesresolvers.cloudflare.acme.dnschallenge=true"
+      - "--certificatesresolvers.cloudflare.acme.dnschallenge.provider=cloudflare"
+      - "--certificatesresolvers.cloudflare.acme.dnschallenge.resolvers=1.1.1.1:53,1.0.0.1:53"
+      #  "--certificatesresolvers.cloudflare.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory"
+
+      # API & Dashboard 
+      - "--api.dashboard=true"
+      - "--api.insecure=false"
+
+      # Observability 
+      - "--log.level=DEBUG"
+      - "--accesslog=true"
+      # - "--metrics.prometheus=true"
+
+    labels:
+      # Enable self‑routing
+      - "traefik.enable=true"
+
+      # Dashboard router
+      - "traefik.http.routers.dashboard.rule=Host(`${TRAEFIK_DOMAIN}`)"
+      - "traefik.http.routers.dashboard.entrypoints=websecure"
+      - "traefik.http.routers.dashboard.service=api@internal"
+      - "traefik.http.routers.dashboard.tls=true"
+      - "traefik.http.routers.dashboard.tls.certresolver=cloudflare"
+      - "traefik.http.routers.dashboard.tls.domains[0].main=${BASE_DOMAIN}"
+      - "traefik.http.routers.dashboard.tls.domains[0].sans=*.${BASE_DOMAIN}"
+
+      # Basic‑auth middleware
+      # htpasswd -nb admin "P@ssw0rd" | sed -e 's/\$/\$\$/g'
+      # nix-shell -p apacheHttpd
+      # If you use .env file, remove the extra $ from the hash, salted MD5
+      - "traefik.http.middlewares.dashboard-auth.basicauth.users=${TRAEFIK_BASIC_AUTH}"
+      - "traefik.http.routers.dashboard.middlewares=dashboard-auth@docker"
+
+networks:
+  proxy:
+    name: proxy
+
+volumes:
+  traefik-letsencrypt:
+  traefik-dynamic:

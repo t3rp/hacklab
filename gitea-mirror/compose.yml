@@ -1,0 +1,46 @@
+# Minimal Gitea Mirror deployment
+# Only includes what CANNOT be configured via the Web UI
+# Everything else can be set up through the web interface after deployment
+
+services:
+  gitea-mirror:
+    image: ghcr.io/raylabshq/gitea-mirror:latest
+    container_name: gitea-mirror
+    restart: unless-stopped
+    networks:
+      - proxy
+    volumes:
+      - gitea-data:/app/data
+    environment:
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
+      - BETTER_AUTH_URL=${BETTER_AUTH_URL:-http://localhost:4321}
+      - BETTER_AUTH_TRUSTED_ORIGINS=${BETTER_AUTH_TRUSTED_ORIGINS:-http://localhost:4321}
+      - NODE_ENV=production
+      - DATABASE_URL=file:data/gitea-mirror.db
+      - HOST=0.0.0.0
+      - PORT=4321
+      - PUBLIC_BETTER_AUTH_URL=${PUBLIC_BETTER_AUTH_URL:-http://localhost:4321}
+      - MIRROR_ISSUE_CONCURRENCY=${MIRROR_ISSUE_CONCURRENCY:-3}
+      - MIRROR_PULL_REQUEST_CONCURRENCY=${MIRROR_PULL_REQUEST_CONCURRENCY:-5}
+      
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=3", "--spider", "http://localhost:4321/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 15s
+
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.gitea-mirror.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.gitea-mirror.entrypoints=websecure"
+      - "traefik.http.services.gitea-mirror.loadbalancer.server.port=4321"
+      - "traefik.http.routers.gitea-mirror.tls=true"
+      - "traefik.docker.network=proxy"
+
+volumes:
+  gitea-data:
+
+networks:
+  proxy:
+    external: true
