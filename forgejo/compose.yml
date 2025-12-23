@@ -1,4 +1,8 @@
-version: '3.8'
+# Forgejo Docker Compose configuration
+
+volumes:
+  forgejo-db-data:
+  forgejo-data:
 
 networks:
   proxy:
@@ -66,7 +70,3 @@ services:
       - "traefik.http.services.forgejo.loadbalancer.server.port=3000"
       - "traefik.http.routers.forgejo.tls=true"
       - "traefik.docker.network=proxy"
-
-volumes:
-  forgejo-db-data:
-  forgejo-data:

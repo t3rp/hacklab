@@ -1,5 +1,8 @@
-version: '3.8'
+# Uptime Kuma Docker Compose configuration
 
+volumes:
+  uptime-kuma-data:
+  
 networks:
   proxy:
     external: true
@@ -21,6 +24,3 @@ services:
       - "traefik.http.services.uptime-kuma.loadbalancer.server.port=3001"
       - "traefik.http.routers.uptime-kuma.tls=true"
       - "traefik.docker.network=proxy"
-
-volumes:
-  uptime-kuma-data:

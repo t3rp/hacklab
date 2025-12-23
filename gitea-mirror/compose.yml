@@ -1,6 +1,11 @@
-# Minimal Gitea Mirror deployment
-# Only includes what CANNOT be configured via the Web UI
-# Everything else can be set up through the web interface after deployment
+# Gitea Mirror Docker Compose configuration
+
+volumes:
+  gitea-data:
+
+networks:
+  proxy:
+    external: true
 
 services:
   gitea-mirror:
@@ -37,10 +42,3 @@ services:
       - "traefik.http.services.gitea-mirror.loadbalancer.server.port=4321"
       - "traefik.http.routers.gitea-mirror.tls=true"
       - "traefik.docker.network=proxy"
-
-volumes:
-  gitea-data:
-
-networks:
-  proxy:
-    external: true

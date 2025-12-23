@@ -1,5 +1,18 @@
-services:
+# Kimai Docker Compose configuration
 
+volumes:
+  kimai-data:
+  kimai-mysql:
+  kimai-plugins:
+
+networks:
+  proxy:
+    external: true
+  kimai-internal:
+    name: kimai-internal
+    internal: true
+
+services:
   sqldb:
     image: mysql:8.3
     container_name: kimai-sqldb
@@ -42,15 +55,3 @@ services:
       - "traefik.http.services.kimai.loadbalancer.server.port=8001"
       - "traefik.http.routers.kimai.tls=true"
       - "traefik.docker.network=proxy"
-
-volumes:
-  kimai-data:
-  kimai-mysql:
-  kimai-plugins:
-
-networks:
-  proxy:
-    external: true
-  kimai-internal:
-    name: kimai-internal
-    internal: true

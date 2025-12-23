@@ -1,3 +1,13 @@
+# Traefik Docker Compose configuration
+
+volumes:
+  traefik-letsencrypt:
+  traefik-dynamic:
+
+networks:
+  proxy:
+    name: proxy
+
 services:
   traefik:
     image: traefik:v3.4
@@ -72,11 +82,3 @@ services:
       # If you use .env file, remove the extra $ from the hash, salted MD5
       - "traefik.http.middlewares.dashboard-auth.basicauth.users=${TRAEFIK_BASIC_AUTH}"
       - "traefik.http.routers.dashboard.middlewares=dashboard-auth@docker"
-
-networks:
-  proxy:
-    name: proxy
-
-volumes:
-  traefik-letsencrypt:
-  traefik-dynamic:

@@ -1,4 +1,12 @@
-version: '3.8'
+# FreshRSS Docker Compose configuration
+
+volumes:
+  freshrss-data:
+  freshrss-extensions:
+
+networks:
+  proxy:
+    external: true
 
 services:
   freshrss:
@@ -22,11 +30,3 @@ services:
       - "traefik.http.routers.freshrss.tls=true"
       - "traefik.http.services.freshrss.loadbalancer.server.port=80"
       - "traefik.docker.network=proxy"
-
-volumes:
-  freshrss-data:
-  freshrss-extensions:
-
-networks:
-  proxy:
-    external: true

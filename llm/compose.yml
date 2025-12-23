@@ -1,5 +1,17 @@
+# LLM Compose configuration
 # sudo podman run --rm --device nvidia.com/gpu=all --security-opt=label=disable ubuntu nvidia-smi -L
 # This works to show the GPU inside a container
+
+volumes:
+  ollama-data:
+  webui-data:
+  n8n-data:
+
+networks:
+  proxy:
+    external: true
+  ollama-network:
+    external: false
 
 services:
   ollama:
@@ -68,14 +80,3 @@ services:
       - "traefik.http.routers.n8n.tls=true"
       - "traefik.http.routers.n8n.tls.certresolver=cloudflare"
       - "traefik.docker.network=proxy"
-
-volumes:
-  ollama-data:
-  webui-data:
-  n8n-data:
-
-networks:
-  proxy:
-    external: true
-  ollama-network:
-    external: false
